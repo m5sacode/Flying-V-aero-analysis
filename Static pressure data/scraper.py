@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # For 3D plotting
+from sympy.benchmarks.bench_meijerint import betadist
+
 
 def parse_file(filename, inverty=False):
     with open(filename) as f:
@@ -210,7 +212,11 @@ def plot_lift_distribution(x, y, pressure):
     plt.show()
 
 cls = []
-
+total_lifts = []
+left_lifts = []
+right_lifts = []
+alphas = [0,0,0,0,0,10,10,10,10,10]
+betas = [0,5,10,15,20,0,5,10,15,20]
 
 for filename in files:
 
@@ -224,8 +230,22 @@ for filename in files:
     pressure_filtered = pressure[mask]
 
     plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
-    # cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
+    cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
+    total_lifts.append(lift)
+    leftmask = ((y) <= 0)
+    x_left = x[leftmask]
+    y_left = y[leftmask]
+    pressure_left = pressure[leftmask]
+    cl, lift = compute_lift_coefficient(x_left, y_left, pressure_left, 0.5*1.176655*34.70916*34.70916, 1.841)
+    left_lifts.append(lift)
 
+    rightmask = ((y) >= 0)
+    x_right = x[rightmask]
+    y_right = y[rightmask]
+    pressure_right = pressure[rightmask]
+    cl, lift = compute_lift_coefficient(x_right, y_right, pressure_right, 0.5 * 1.176655 * 34.70916 * 34.70916,
+                                        1.841)
+    right_lifts.append(lift)
 # Parse the file
 x, y, pressure = parse_file("10-20.dat", inverty=True)
 # Filter out points where abs(y) > 1.5 and pressure == 0
@@ -234,4 +254,59 @@ x_filtered = x[mask]
 y_filtered = y[mask]
 pressure_filtered = pressure[mask]
 plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
-# cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
+cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
+total_lifts.append(lift)
+leftmask = ((y) <= 0)
+x_left = x[leftmask]
+y_left = y[leftmask]
+pressure_left = pressure[leftmask]
+cl, lift = compute_lift_coefficient(x_left, y_left, pressure_left, 0.5*1.176655*34.70916*34.70916, 1.841)
+left_lifts.append(lift)
+rightmask = ((y) >= 0)
+x_right = x[rightmask]
+y_right = y[rightmask]
+pressure_right = pressure[rightmask]
+cl, lift = compute_lift_coefficient(x_right, y_right, pressure_right, 0.5 * 1.176655 * 34.70916 * 34.70916,
+                                    1.841)
+right_lifts.append(lift)
+
+alphas = np.array(alphas)
+total_lifts = np.array(total_lifts)
+left_lifts = np.array(left_lifts)
+right_lifts = np.array(right_lifts)
+
+# Separate data by alpha values
+betas_alpha_0 = betas[:5]
+betas_alpha_10 = betas[5:]
+
+left_lift_alpha_0 = left_lifts[:5]
+right_lift_alpha_0 = right_lifts[:5]
+total_lifts_alpha_0 = total_lifts[:5]
+
+left_lift_alpha_10 = left_lifts[5:]
+right_lift_alpha_10 = right_lifts[5:]
+total_lifts_alpha_10 = total_lifts[5:]
+
+# Plot lift of both wings vs. sideslip angle for alpha = 0
+plt.figure(figsize=(8, 6))
+plt.plot(betas_alpha_0, left_lift_alpha_0, 'bo-', label="Left Wing (\u03B1=0°)")
+plt.plot(betas_alpha_0, right_lift_alpha_0, 'ro-', label="Right Wing (\u03B1=0°)")
+plt.plot(betas_alpha_0, total_lifts_alpha_0, 'go-', label="Total Wing (\u03B1=0°)")
+plt.xlabel("Sideslip Angle (β°)")
+plt.ylabel("Lift Force (N)")
+plt.title("Lift vs. Sideslip Angle (α = 0°)")
+plt.grid(True)
+plt.legend()
+plt.show()
+
+# Plot lift of both wings vs. sideslip angle for alpha = 10
+plt.figure(figsize=(8, 6))
+plt.plot(betas_alpha_10, left_lift_alpha_10, 'bo-', label="Left Wing (\u03B1=10°)")
+plt.plot(betas_alpha_10, right_lift_alpha_10, 'ro-', label="Right Wing (\u03B1=10°)")
+plt.plot(betas_alpha_10, total_lifts_alpha_10, 'go-', label="Total Wing (\u03B1=10°)")
+plt.xlabel("Sideslip Angle (β°)")
+plt.ylabel("Lift Force (N)")
+plt.title("Lift vs. Sideslip Angle (α = 10°)")
+plt.grid(True)
+plt.legend()
+plt.show()
