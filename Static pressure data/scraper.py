@@ -1,8 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # For 3D plotting
-from sympy.benchmarks.bench_meijerint import betadist
+import os
 
+# Define the folder where you want to save the plots
+output_folder = "plots"
+
+# Check if the folder exists, if not, create it
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
 
 def parse_file(filename, inverty=False):
     with open(filename) as f:
@@ -111,6 +116,38 @@ def parse_file(filename, inverty=False):
         raise Exception("No data")
 
 
+
+def plot_cp_slices(x, y, pressure, q, title="Pressure coefficients"):
+    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+    x_filtered = x[mask]
+    y_filtered = y[mask]
+    pressure_filtered = pressure[mask]
+
+    cps = (1 / q) * np.array(pressure_filtered)
+    unique_y = np.unique(y_filtered)
+
+    for y_value in unique_y:
+        mask_y = (y_filtered == y_value)
+        x_at_y = x_filtered[mask_y]
+        cp_at_y = cps[mask_y]
+
+        # Normalize x values for each span (y-value)
+        x_min, x_max = np.min(x_at_y), np.max(x_at_y)
+        x_at_y_normalized = (x_at_y - x_min) / (x_max - x_min)
+
+        plt.figure(figsize=(8, 6))
+        plt.scatter(x_at_y_normalized, cp_at_y, marker='o', s=5)  # Scatter plot
+        # plt.plot(x_at_y, cp_at_y, 'bo-') #line plot
+        plt.xlabel("Normalized X Position")
+        plt.ylabel("cp")
+        plt.title(f"{title} at Y = {y_value}")
+        plt.gca().invert_yaxis()  # Invert y-axis
+        plt.grid(True)
+        # Save the plot to the specified folder
+        plot_filename = os.path.join(output_folder, f"{title.replace(' ', '_')}_Y_{y_value}.png")
+        plt.savefig(plot_filename)
+        plt.close()
+
 def compute_lift_coefficient(x, y, pressure, q, S):
     """
     Compute the lift coefficient by integrating the pressure distribution separately
@@ -203,7 +240,7 @@ left_lifts = []
 right_lifts = []
 alphas = [0,0,0,0,0,10,10,10,10,10]
 betas = [0,5,10,15,20,0,5,10,15,20]
-
+index = 0
 for filename in files:
 
     # Parse the file
@@ -214,8 +251,9 @@ for filename in files:
     x_filtered = x[mask]
     y_filtered = y[mask]
     pressure_filtered = pressure[mask]
-
-    plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
+    title = "Pressures at alpha = " + str(alphas[index]) + " beta = " + str(betas[index])
+    plot_cp_slices(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, title=title)
+    # plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
     cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
     total_lifts.append(lift)
     cls.append(cl)
@@ -233,6 +271,7 @@ for filename in files:
     cl, lift = compute_lift_coefficient(x_right, y_right, pressure_right, 0.5 * 1.176655 * 34.70916 * 34.70916,
                                         1.841)
     right_lifts.append(lift)
+    index+=1
 # Parse the file
 x, y, pressure = parse_file("10-20.dat", inverty=True)
 # Filter out points where abs(y) > 1.5 and pressure == 0
@@ -240,7 +279,9 @@ mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
 x_filtered = x[mask]
 y_filtered = y[mask]
 pressure_filtered = pressure[mask]
-plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
+title = "Pressures at alpha = " + str(alphas[index]) + " beta = " + str(betas[index])
+plot_cp_slices(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, title=title)
+# plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
 cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
 cls.append(cl)
 total_lifts.append(lift)
@@ -275,40 +316,40 @@ left_lift_alpha_10 = left_lifts[5:]
 right_lift_alpha_10 = right_lifts[5:]
 total_lifts_alpha_10 = total_lifts[5:]
 
-# Plot lift of both wings vs. sideslip angle for alpha = 0
-plt.figure(figsize=(8, 6))
-plt.plot(betas_alpha_0, left_lift_alpha_0, 'bo-', label="Left Wing (\u03B1=0°)")
-plt.plot(betas_alpha_0, right_lift_alpha_0, 'ro-', label="Right Wing (\u03B1=0°)")
-plt.plot(betas_alpha_0, total_lifts_alpha_0, 'go-', label="Total Wing (\u03B1=0°)")
-plt.xlabel("Sideslip Angle (β°)")
-plt.ylabel("Lift Force (N)")
-plt.title("Lift vs. Sideslip Angle (α = 0°)")
-plt.grid(True)
-plt.legend()
-plt.show()
-
-# Plot lift of both wings vs. sideslip angle for alpha = 10
-plt.figure(figsize=(8, 6))
-plt.plot(betas_alpha_10, left_lift_alpha_10, 'bo-', label="Left Wing (\u03B1=10°)")
-plt.plot(betas_alpha_10, right_lift_alpha_10, 'ro-', label="Right Wing (\u03B1=10°)")
-plt.plot(betas_alpha_10, total_lifts_alpha_10, 'go-', label="Total Wing (\u03B1=10°)")
-plt.xlabel("Sideslip Angle (β°)")
-plt.ylabel("Lift Force (N)")
-plt.title("Lift vs. Sideslip Angle (α = 10°)")
-plt.grid(True)
-plt.legend()
-plt.show()
-
-total_cls_alpha_0 = cls[:5]
-total_cls_alpha_10 = cls[5:]
-
-# Plot cl of both wings vs. sideslip angle for alpha = 0
-plt.figure(figsize=(8, 6))
-plt.plot(betas_alpha_0, total_cls_alpha_0, 'bo-', label="Alpha 0 Cl (\u03B1=0°)")
-plt.plot(betas_alpha_0, total_cls_alpha_10, 'bo-', label="Alpha 10 Cl (\u03B1=0°)")
-plt.xlabel("Sideslip Angle (β°)")
-plt.ylabel("Lift Coefficient")
-plt.title("Cl vs. Sideslip Angle")
-plt.grid(True)
-plt.legend()
-plt.show()
+# # Plot lift of both wings vs. sideslip angle for alpha = 0
+# plt.figure(figsize=(8, 6))
+# plt.plot(betas_alpha_0, left_lift_alpha_0, 'bo-', label="Left Wing (\u03B1=0°)")
+# plt.plot(betas_alpha_0, right_lift_alpha_0, 'ro-', label="Right Wing (\u03B1=0°)")
+# plt.plot(betas_alpha_0, total_lifts_alpha_0, 'go-', label="Total Wing (\u03B1=0°)")
+# plt.xlabel("Sideslip Angle (β°)")
+# plt.ylabel("Lift Force (N)")
+# plt.title("Lift vs. Sideslip Angle (α = 0°)")
+# plt.grid(True)
+# plt.legend()
+# plt.show()
+#
+# # Plot lift of both wings vs. sideslip angle for alpha = 10
+# plt.figure(figsize=(8, 6))
+# plt.plot(betas_alpha_10, left_lift_alpha_10, 'bo-', label="Left Wing (\u03B1=10°)")
+# plt.plot(betas_alpha_10, right_lift_alpha_10, 'ro-', label="Right Wing (\u03B1=10°)")
+# plt.plot(betas_alpha_10, total_lifts_alpha_10, 'go-', label="Total Wing (\u03B1=10°)")
+# plt.xlabel("Sideslip Angle (β°)")
+# plt.ylabel("Lift Force (N)")
+# plt.title("Lift vs. Sideslip Angle (α = 10°)")
+# plt.grid(True)
+# plt.legend()
+# plt.show()
+#
+# total_cls_alpha_0 = cls[:5]
+# total_cls_alpha_10 = cls[5:]
+#
+# # Plot cl of both wings vs. sideslip angle for alpha = 0
+# plt.figure(figsize=(8, 6))
+# plt.plot(betas_alpha_0, total_cls_alpha_0, 'bo-', label="Alpha 0 Cl (\u03B1=0°)")
+# plt.plot(betas_alpha_0, total_cls_alpha_10, 'bo-', label="Alpha 10 Cl (\u03B1=0°)")
+# plt.xlabel("Sideslip Angle (β°)")
+# plt.ylabel("Lift Coefficient")
+# plt.title("Cl vs. Sideslip Angle")
+# plt.grid(True)
+# plt.legend()
+# plt.show()
