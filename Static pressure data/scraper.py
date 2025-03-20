@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # For 3D plotting
 
-def parse_file(filename):
+def parse_file(filename, inverty=False):
     with open(filename) as f:
         lines = f.readlines()
     reading = False
@@ -101,15 +101,76 @@ def parse_file(filename):
                         pass  # Skip non-numeric values
     if Xs is not None and Ys is not None and Statics is not None:
         print(len(Xs), len(Ys), len(Statics))
-        return np.array(Xs), np.array(Ys), np.array(Statics)
+        if inverty:
+            return np.array(Xs), -np.array(Ys), np.array(Statics)
+        else:
+            return np.array(Xs), np.array(Ys), np.array(Statics)
     else:
         raise Exception("No data")
 
-files = ["00-00.dat", "00-05.dat", "00-10.dat", "00-15.dat", "00-20.dat", "10-00.dat", "10-05.dat", "10-10.dat", "10-15.dat", "10-20.dat"]
+files = ["00-00.dat", "00-05.dat", "00-10.dat", "00-15.dat", "00-20.dat", "10-00.dat", "10-05.dat", "10-10.dat", "10-15.dat"]
+
+
+def compute_lift_coefficient(x, y, pressure, q, S):
+    """
+    Compute the lift coefficient by integrating the pressure distribution.
+
+    Parameters:
+      x        : 1D numpy array of x-coordinates.
+      y        : 1D numpy array of y-coordinates.
+      pressure : 1D numpy array of pressure values.
+      q        : Dynamic pressure (0.5*rho*V^2).
+      S        : Reference area of the wing.
+
+    Returns:
+      Cl       : The computed lift coefficient.
+      L_total  : The total integrated lift (force).
+    """
+    # Apply the same filter as in the plot function:
+    # Filter points: |y| <= 1.5 and |pressure| > 5
+    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+    x_filtered = x[mask]
+    y_filtered = y[mask]
+    pressure_filtered = pressure[mask]
+
+    # Group data by spanwise stations (unique y-values)
+    unique_y = np.unique(y_filtered)
+    local_lift = []
+
+    # At each spanwise station, integrate along the chord using the trapezoidal rule.
+    for y_value in unique_y:
+        mask_y = (y_filtered == y_value)
+        x_at_y = x_filtered[mask_y]
+        pressures_at_y = pressure_filtered[mask_y]
+
+        # Sort the x values to ensure proper numerical integration.
+        sorted_indices = np.argsort(x_at_y)
+        x_sorted = x_at_y[sorted_indices]
+        pressures_sorted = pressures_at_y[sorted_indices]
+
+        # Numerically integrate along the chord.
+        # The negative sign accounts for the pressure convention.
+        lift_at_y = -np.trapezoid(pressures_sorted, x_sorted)
+        local_lift.append(lift_at_y)
+
+    local_lift = np.array(local_lift)
+
+    # Integrate the chordwise lift distribution along the spanwise direction.
+    # Ensure the unique y values are sorted.
+    sorted_y_indices = np.argsort(unique_y)
+    unique_y_sorted = unique_y[sorted_y_indices]
+    local_lift_sorted = local_lift[sorted_y_indices]
+
+    L_total = np.trapezoid(local_lift_sorted, unique_y_sorted)
+
+    # Compute the lift coefficient.
+    Cl = L_total / (q * S)
+
+    return Cl, L_total
 
 def plot_lift_distribution(x, y, pressure):
     # Filter out points where pressure == 0 and abs(y) <= 1.5
-    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 5)
+    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
     x_filtered = x[mask]
     y_filtered = y[mask]
     pressure_filtered = pressure[mask]
@@ -118,32 +179,38 @@ def plot_lift_distribution(x, y, pressure):
     unique_y = np.unique(y_filtered)  # Get unique y-coordinates
     lift_distribution = []
 
-    # Calculate the lift distribution and scale by chord length
+    # Calculate the lift distribution via numerical integration
     for y_value in unique_y:
         mask_y = (y_filtered == y_value)
-        pressures_at_y = pressure_filtered[mask_y]  # Pressure values at this y position
-        x_at_y = x_filtered[mask_y]  # x-values at this y position
+        pressures_at_y = pressure_filtered[mask_y]
+        x_at_y = x_filtered[mask_y]
 
-        # Sum the pressures for each spanwise location
-        total_pressure = np.sum(pressures_at_y)
+        # Sort x values to ensure proper integration
+        sorted_indices = np.argsort(x_at_y)
+        x_sorted = x_at_y[sorted_indices]
+        pressures_sorted = pressures_at_y[sorted_indices]
 
-        # Calculate the chord as the difference between max and min x at this y value
-        chord_at_y = np.max(x_at_y) - np.min(x_at_y)
+        # Numerically integrate lift using the trapezoidal rule
+        lift_at_y = -np.trapezoid(pressures_sorted, x_sorted)  # Negative sign for pressure convention
 
-        # Scale the summed pressures by the chord length at this y position
-        scaled_pressure = total_pressure * chord_at_y
-
-        lift_distribution.append(scaled_pressure)
+        lift_distribution.append(lift_at_y)
 
     # Plot the lift distribution along the span
     plt.figure(figsize=(8, 6))
     plt.plot(unique_y, lift_distribution, marker='o', color='b', label="Lift Distribution")
+    # Add vertical reference lines at y = 0 and y = ±0.94
+    plt.axvline(x=0, color='r', linestyle='--', label="Centerline")
+    plt.axvline(x=0.94, color='g', linestyle='--', label="Right kink")
+    plt.axvline(x=-0.94, color='g', linestyle='--', label="Left kink")
     plt.xlabel("Spanwise Position (Y Coordinate)")
-    plt.ylabel("Lift (Scaled by Chord Length)")
+    plt.ylabel("Lift (Numerically Integrated)")
     plt.title("Lift Distribution Along the Span")
     plt.grid(True)
     plt.legend()
     plt.show()
+
+cls = []
+
 
 for filename in files:
 
@@ -151,27 +218,20 @@ for filename in files:
     x, y, pressure = parse_file(filename)
 
     # Filter out points where abs(y) > 1.5 and pressure == 0
-    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 5)
+    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
     x_filtered = x[mask]
     y_filtered = y[mask]
     pressure_filtered = pressure[mask]
 
     plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
-    # # Create a 3D plot
-    # fig = plt.figure(figsize=(10, 8))
-    # ax = fig.add_subplot(111, projection='3d')
-    #
-    # # Plot the filtered data as tiny dots in 3D
-    # sc = ax.scatter(x_filtered, y_filtered, pressure_filtered, c=pressure_filtered, cmap='viridis', s=5, edgecolor='k')
-    #
-    # # Add color bar
-    # plt.colorbar(sc, label="Static Pressure")
-    #
-    # # Labels and title
-    # ax.set_xlabel("X Coordinate")
-    # ax.set_ylabel("Y Coordinate")
-    # ax.set_zlabel("Static Pressure")
-    # ax.set_title("3D Static Pressure Distribution (Filtered")
-    #
-    # # Show the plot
-    # plt.show()
+    # cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
+
+# Parse the file
+x, y, pressure = parse_file("10-20.dat", inverty=True)
+# Filter out points where abs(y) > 1.5 and pressure == 0
+mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+x_filtered = x[mask]
+y_filtered = y[mask]
+pressure_filtered = pressure[mask]
+plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
+# cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
