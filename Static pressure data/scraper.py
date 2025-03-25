@@ -116,6 +116,38 @@ def parse_file(filename, inverty=False):
         raise Exception("No data")
 
 
+def plot_cp_slices_x(x, y, pressure, q, title="Pressure coefficients"):
+    '''This does not work :('''
+    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+    x_filtered = x[mask]
+    y_filtered = y[mask]
+    pressure_filtered = pressure[mask]
+
+    cps = (1 / q) * np.array(pressure_filtered)
+    unique_x = np.unique(x_filtered)
+
+    for x_value in unique_x:
+        mask_x = (x_filtered == x_value)
+        y_at_x = y_filtered[mask_x]
+        cp_at_x = cps[mask_x]
+
+        # Normalize x values for each span (y-value)
+        y_min, y_max = np.min(y_at_x), np.max(y_at_x)
+        y_at_x_normalized = (y_at_x - y_min) / (y_max - y_min)
+
+        plt.figure(figsize=(8, 6))
+        plt.scatter(y_at_x_normalized, cp_at_x, marker='o', s=5)  # Scatter plot
+        # plt.plot(x_at_y, cp_at_y, 'bo-') #line plot
+        plt.xlabel("Normalized X Position")
+        plt.ylabel("cp")
+        plt.title(f"{title} at X = {x_value}")
+        plt.gca().invert_yaxis()  # Invert y-axis
+        plt.grid(True)
+        plt.show()
+        # Save the plot to the specified folder
+        plot_filename = os.path.join(output_folder, f"{title.replace(' ', '_')}_X_{x_value}.png")
+        plt.savefig(plot_filename)
+        plt.close()
 
 def plot_cp_slices(x, y, pressure, q, title="Pressure coefficients"):
     mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
@@ -213,8 +245,10 @@ def plot_lift_distribution(x, y, pressure):
 
         lift_pos = np.trapezoid(pressures_sorted[pos_mask], x_sorted[pos_mask]) if np.any(pos_mask) else 0.0
         lift_neg = np.trapezoid(pressures_sorted[neg_mask], x_sorted[neg_mask]) if np.any(neg_mask) else 0.0
-
         lift_at_y = -(lift_pos + lift_neg)
+        x_min, x_max = np.min(x_at_y), np.max(x_at_y)
+        print("Chord: ", (x_max - x_min))
+        # lift_at_y = lift_at_y*(x_max-x_min) # de normalize by the chord
         lift_distribution.append(lift_at_y)
 
     plt.figure(figsize=(8, 6))
@@ -252,8 +286,10 @@ for filename in files:
     y_filtered = y[mask]
     pressure_filtered = pressure[mask]
     title = "Pressures at alpha = " + str(alphas[index]) + " beta = " + str(betas[index])
-    plot_cp_slices(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, title=title)
-    # plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
+    # plot_cp_slices(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, title=title)
+    # plot_cp_slices_x(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, title=title)
+
+    plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
     cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
     total_lifts.append(lift)
     cls.append(cl)
@@ -280,8 +316,10 @@ x_filtered = x[mask]
 y_filtered = y[mask]
 pressure_filtered = pressure[mask]
 title = "Pressures at alpha = " + str(alphas[index]) + " beta = " + str(betas[index])
-plot_cp_slices(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, title=title)
-# plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
+# plot_cp_slices(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, title=title)
+# plot_cp_slices_x(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, title=title)
+
+plot_lift_distribution(x_filtered, y_filtered, pressure_filtered)
 cl, lift = compute_lift_coefficient(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, 1.841)
 cls.append(cl)
 total_lifts.append(lift)
