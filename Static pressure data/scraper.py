@@ -248,7 +248,7 @@ def plot_lift_distribution(x, y, pressure):
         lift_at_y = -(lift_pos + lift_neg)
         x_min, x_max = np.min(x_at_y), np.max(x_at_y)
         print("Chord: ", (x_max - x_min))
-        # lift_at_y = lift_at_y*(x_max-x_min) # de normalize by the chord
+        # lift_at_y = lift_at_y/(x_max-x_min) # normalize by the chord
         lift_distribution.append(lift_at_y)
 
     plt.figure(figsize=(8, 6))
@@ -263,6 +263,58 @@ def plot_lift_distribution(x, y, pressure):
     plt.title("Lift Distribution Along the Span")
     plt.grid(True)
     plt.legend()
+    plt.show()
+
+def plot_all_lift_distributions(datasets, titles):
+    """
+    Plot lift distributions for multiple datasets in a single figure.
+    Each dataset is a tuple (x, y, pressure).
+    """
+    plt.figure(figsize=(10, 6))
+
+    for (x, y, pressure), label in zip(datasets, titles):
+        mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+        x_filtered = x[mask]
+        y_filtered = y[mask]
+        pressure_filtered = pressure[mask]
+
+        unique_y = np.unique(y_filtered)
+        lift_distribution = []
+
+        for y_value in unique_y:
+            mask_y = (y_filtered == y_value)
+            x_at_y = x_filtered[mask_y]
+            pressures_at_y = pressure_filtered[mask_y]
+
+            sorted_indices = np.argsort(x_at_y)
+            x_sorted = x_at_y[sorted_indices]
+            pressures_sorted = pressures_at_y[sorted_indices]
+
+            pos_mask = pressures_sorted >= 0
+            neg_mask = pressures_sorted < 0
+
+            lift_pos = np.trapezoid(pressures_sorted[pos_mask], x_sorted[pos_mask]) if np.any(pos_mask) else 0.0
+            lift_neg = np.trapezoid(pressures_sorted[neg_mask], x_sorted[neg_mask]) if np.any(neg_mask) else 0.0
+            lift_at_y = -(lift_pos + lift_neg)
+            x_min, x_max = np.min(x_at_y), np.max(x_at_y)
+            print("Chord: ", (x_max - x_min))
+            # lift_at_y = lift_at_y / (x_max - x_min)  # normalize by the chord
+            lift_distribution.append(lift_at_y)
+
+        plt.plot(unique_y, lift_distribution, marker='o', label=label)
+
+    # Add reference lines and formatting
+    plt.axvline(x=0, color='r', linestyle='--', label="Centerline")
+    plt.axvline(x=0.94, color='g', linestyle='--', label="Right kink")
+    plt.axvline(x=-0.94, color='g', linestyle='--', label="Left kink")
+    plt.axvline(x=0.579, color='b', linestyle='dotted', label="Right TE kink")
+    plt.axvline(x=-0.579, color='b', linestyle='dotted', label="Left TE kink")
+    plt.xlabel("Spanwise Position (Y Coordinate)")
+    plt.ylabel("Lift (Numerically Integrated)")
+    plt.title("Lift Distributions for All Cases")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
     plt.show()
 
 
@@ -353,6 +405,27 @@ total_lifts_alpha_0 = total_lifts[:5]
 left_lift_alpha_10 = left_lifts[5:]
 right_lift_alpha_10 = right_lifts[5:]
 total_lifts_alpha_10 = total_lifts[5:]
+
+datasets = []
+titles = []
+
+for i, filename in enumerate(files[5:] + ["10-20.dat"]):
+    x, y, pressure = parse_file(filename, inverty=(filename == "10-20.dat"))
+    datasets.append((x, y, pressure))
+    titles.append(f"α={alphas[i+5]}°, β={betas[i+5]}°")
+
+plot_all_lift_distributions(datasets, titles)
+
+datasets = []
+titles = []
+
+for i, filename in enumerate(files[:5]):
+    x, y, pressure = parse_file(filename, inverty=(filename == "10-20.dat"))
+    datasets.append((x, y, pressure))
+    titles.append(f"α={alphas[i]}°, β={betas[i]}°")
+
+plot_all_lift_distributions(datasets, titles)
+
 
 # # Plot lift of both wings vs. sideslip angle for alpha = 0
 # plt.figure(figsize=(8, 6))
