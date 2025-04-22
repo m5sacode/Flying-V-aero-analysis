@@ -427,40 +427,40 @@ for i, filename in enumerate(files[:5]):
 plot_all_lift_distributions(datasets, titles)
 
 
-# # Plot lift of both wings vs. sideslip angle for alpha = 0
-# plt.figure(figsize=(8, 6))
-# plt.plot(betas_alpha_0, left_lift_alpha_0, 'bo-', label="Left Wing (\u03B1=0°)")
-# plt.plot(betas_alpha_0, right_lift_alpha_0, 'ro-', label="Right Wing (\u03B1=0°)")
-# plt.plot(betas_alpha_0, total_lifts_alpha_0, 'go-', label="Total Wing (\u03B1=0°)")
-# plt.xlabel("Sideslip Angle (β°)")
-# plt.ylabel("Lift Force (N)")
-# plt.title("Lift vs. Sideslip Angle (α = 0°)")
-# plt.grid(True)
-# plt.legend()
-# plt.show()
-#
-# # Plot lift of both wings vs. sideslip angle for alpha = 10
-# plt.figure(figsize=(8, 6))
-# plt.plot(betas_alpha_10, left_lift_alpha_10, 'bo-', label="Left Wing (\u03B1=10°)")
-# plt.plot(betas_alpha_10, right_lift_alpha_10, 'ro-', label="Right Wing (\u03B1=10°)")
-# plt.plot(betas_alpha_10, total_lifts_alpha_10, 'go-', label="Total Wing (\u03B1=10°)")
-# plt.xlabel("Sideslip Angle (β°)")
-# plt.ylabel("Lift Force (N)")
-# plt.title("Lift vs. Sideslip Angle (α = 10°)")
-# plt.grid(True)
-# plt.legend()
-# plt.show()
-#
-# total_cls_alpha_0 = cls[:5]
-# total_cls_alpha_10 = cls[5:]
-#
-# # Plot cl of both wings vs. sideslip angle for alpha = 0
-# plt.figure(figsize=(8, 6))
-# plt.plot(betas_alpha_0, total_cls_alpha_0, 'bo-', label="Alpha 0 Cl (\u03B1=0°)")
-# plt.plot(betas_alpha_0, total_cls_alpha_10, 'bo-', label="Alpha 10 Cl (\u03B1=0°)")
-# plt.xlabel("Sideslip Angle (β°)")
-# plt.ylabel("Lift Coefficient")
-# plt.title("Cl vs. Sideslip Angle")
-# plt.grid(True)
-# plt.legend()
-# plt.show()
+# Plot lift of both wings vs. sideslip angle for alpha = 0
+plt.figure(figsize=(8, 6))
+plt.plot(betas_alpha_0, left_lift_alpha_0, 'bo-', label="Left Wing (\u03B1=0°)")
+plt.plot(betas_alpha_0, right_lift_alpha_0, 'ro-', label="Right Wing (\u03B1=0°)")
+plt.plot(betas_alpha_0, total_lifts_alpha_0, 'go-', label="Total Wing (\u03B1=0°)")
+plt.xlabel("Sideslip Angle (β°)")
+plt.ylabel("Lift Force (N)")
+plt.title("Lift vs. Sideslip Angle (α = 0°)")
+plt.grid(True)
+plt.legend()
+plt.show()
+
+# Plot lift of both wings vs. sideslip angle for alpha = 10
+plt.figure(figsize=(8, 6))
+plt.plot(betas_alpha_10, left_lift_alpha_10, 'bo-', label="Left Wing (\u03B1=10°)")
+plt.plot(betas_alpha_10, right_lift_alpha_10, 'ro-', label="Right Wing (\u03B1=10°)")
+plt.plot(betas_alpha_10, total_lifts_alpha_10, 'go-', label="Total Wing (\u03B1=10°)")
+plt.xlabel("Sideslip Angle (β°)")
+plt.ylabel("Lift Force (N)")
+plt.title("Lift vs. Sideslip Angle (α = 10°)")
+plt.grid(True)
+plt.legend()
+plt.show()
+
+total_cls_alpha_0 = cls[:5]
+total_cls_alpha_10 = cls[5:]
+
+# Plot cl of both wings vs. sideslip angle for alpha = 0
+plt.figure(figsize=(8, 6))
+plt.plot(betas_alpha_0, total_cls_alpha_0, 'ro-', label="Alpha 0 Cl (\u03B1=0°)")
+plt.plot(betas_alpha_0, total_cls_alpha_10, 'bo-', label="Alpha 10 Cl (\u03B1=0°)")
+plt.xlabel("Sideslip Angle (β°)")
+plt.ylabel("Lift Coefficient")
+plt.title("Cl vs. Sideslip Angle")
+plt.grid(True)
+plt.legend()
+plt.show()
