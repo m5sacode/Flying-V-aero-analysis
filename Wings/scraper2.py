@@ -158,10 +158,34 @@ def compute_lift_coefficient(x, y, z, pressure, q, S):
         pressures_sorted = pressures_at_y[sorted_indices]
         z_sorted = z_at_y[sorted_indices]
 
-        # Separate positive and negative pressures for integration
-        m = (z_sorted[-1]-z_sorted[0]) / (x_sorted[-1]-x_sorted[0])
-        pos_mask = z_sorted >= (z_sorted[0] + m * (x_sorted - x_sorted[0]))
-        neg_mask = z_sorted < (z_sorted[0] + m * (x_sorted - x_sorted[0]))
+        # Assume x_sorted and z_sorted are already defined and sorted by x
+        x_sorted = np.asarray(x_sorted)
+        z_sorted = np.asarray(z_sorted)
+
+        # Define midpoint at the point of maximum Z
+        mid_index = np.argmax(z_sorted)
+        x_mid = x_sorted[mid_index]
+
+        # Leading edge segment
+        x_lead = x_sorted[:(mid_index + 1)]
+        z_lead = z_sorted[:(mid_index + 1)]
+        m1 = (z_lead[-1] - z_lead[0]) / (x_lead[-1] - x_lead[0])
+        line1 = z_lead[0] + m1 * (x_lead - x_lead[0])
+
+        # Trailing edge segment
+        x_trail = x_sorted[mid_index:]
+        z_trail = z_sorted[mid_index:]
+        m2 = (z_trail[-1] - z_trail[0]) / (x_trail[-1] - x_trail[0])
+        line2 = z_trail[0] + m2 * (x_trail - x_trail[0])
+
+        # Construct the full separating line
+        boundary = np.empty_like(z_sorted)
+        boundary[:(mid_index + 1)] = line1
+        boundary[mid_index:] = line2
+
+        # Create masks
+        pos_mask = z_sorted >= boundary
+        neg_mask = z_sorted < boundary
 
         lift_pos = np.trapezoid(pressures_sorted[pos_mask], x_sorted[pos_mask]) if np.any(pos_mask) else 0.0
         lift_neg = np.trapezoid(pressures_sorted[neg_mask], x_sorted[neg_mask]) if np.any(neg_mask) else 0.0
@@ -179,7 +203,7 @@ def compute_lift_coefficient(x, y, z, pressure, q, S):
     return Cl, L_total
 
 
-def plot_lift_distribution(x, y, z, pressure, plot_surf=True):
+def plot_lift_distribution(x, y, z, pressure, plot_surf=False):
     mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
     x_filtered = x[mask]
     y_filtered = y[mask]
@@ -200,22 +224,50 @@ def plot_lift_distribution(x, y, z, pressure, plot_surf=True):
         z_sorted = z_at_y[sorted_indices]
         pressures_sorted = pressures_at_y[sorted_indices]
 
-        m = (z_sorted[-1] - z_sorted[0]) / (x_sorted[-1] - x_sorted[0])
-        pos_mask = z_sorted >= (z_sorted[0] + m * (x_sorted - x_sorted[0]))
-        neg_mask = z_sorted < (z_sorted[0] + m * (x_sorted - x_sorted[0]))
+        # Assume x_sorted and z_sorted are already defined and sorted by x
+        x_sorted = np.asarray(x_sorted)
+        z_sorted = np.asarray(z_sorted)
 
+        # Define midpoint at the point of maximum Z
+        mid_index = np.argmax(z_sorted)
+        x_mid = x_sorted[mid_index]
+
+        # Leading edge segment
+        x_lead = x_sorted[:(mid_index+1)]
+        z_lead = z_sorted[:(mid_index+1)]
+        m1 = (z_lead[-1] - z_lead[0]) / (x_lead[-1] - x_lead[0])
+        line1 = z_lead[0] + m1 * (x_lead - x_lead[0])
+
+        # Trailing edge segment
+        x_trail = x_sorted[mid_index:]
+        z_trail = z_sorted[mid_index:]
+        m2 = (z_trail[-1] - z_trail[0]) / (x_trail[-1] - x_trail[0])
+        line2 = z_trail[0] + m2 * (x_trail - x_trail[0])
+
+        # Construct the full separating line
+        boundary = np.empty_like(z_sorted)
+        boundary[:(mid_index+1)] = line1
+        boundary[mid_index:] = line2
+
+        # Create masks
+        pos_mask = z_sorted >= boundary
+        neg_mask = z_sorted < boundary
+
+        # Plotting
         if plot_surf:
-            # Your plotting loop or context
             plt.plot(x_sorted[pos_mask], z_sorted[pos_mask], label=f'Upper surface at {y_value}', linewidth=2)
             plt.plot(x_sorted[neg_mask], z_sorted[neg_mask], label=f'Lower surface at {y_value}', linewidth=2)
+
+            # Plot the separating lines
+            plt.plot(x_lead, line1, 'k--', label='Leading edge split line', alpha=0.7)
+            plt.plot(x_trail, line2, 'k--', label='Trailing edge split line', alpha=0.7)
 
             # Improve appearance
             plt.xlabel('x-coordinate')
             plt.ylabel('z-coordinate')
-            plt.title('Airfoil Upper Surface')
-            plt.gca().set_aspect('equal', adjustable='box')  # Ensures 1:1 aspect ratio
+            plt.title('Airfoil Upper and Lower Surfaces')
+            plt.gca().set_aspect('equal', adjustable='box')
             plt.grid(True, linestyle='--', alpha=0.5)
-            plt.legend()
             plt.tight_layout()
             plt.show()
 
@@ -249,10 +301,11 @@ def plot_all_lift_distributions(datasets, titles):
     """
     plt.figure(figsize=(10, 6))
 
-    for (x, y, pressure), label in zip(datasets, titles):
+    for (x, y, z, pressure), label in zip(datasets, titles):
         mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
         x_filtered = x[mask]
         y_filtered = y[mask]
+        z_filtered = z[mask]
         pressure_filtered = pressure[mask]
 
         unique_y = np.unique(y_filtered)
@@ -261,14 +314,42 @@ def plot_all_lift_distributions(datasets, titles):
         for y_value in unique_y:
             mask_y = (y_filtered == y_value)
             x_at_y = x_filtered[mask_y]
+            z_at_y = z_filtered[mask_y]
             pressures_at_y = pressure_filtered[mask_y]
 
             sorted_indices = np.argsort(x_at_y)
             x_sorted = x_at_y[sorted_indices]
+            z_sorted = z_at_y[sorted_indices]
             pressures_sorted = pressures_at_y[sorted_indices]
 
-            pos_mask = pressures_sorted >= 0
-            neg_mask = pressures_sorted < 0
+            # Assume x_sorted and z_sorted are already defined and sorted by x
+            x_sorted = np.asarray(x_sorted)
+            z_sorted = np.asarray(z_sorted)
+
+            # Define midpoint at the point of maximum Z
+            mid_index = np.argmax(z_sorted)
+            x_mid = x_sorted[mid_index]
+
+            # Leading edge segment
+            x_lead = x_sorted[:(mid_index + 1)]
+            z_lead = z_sorted[:(mid_index + 1)]
+            m1 = (z_lead[-1] - z_lead[0]) / (x_lead[-1] - x_lead[0])
+            line1 = z_lead[0] + m1 * (x_lead - x_lead[0])
+
+            # Trailing edge segment
+            x_trail = x_sorted[mid_index:]
+            z_trail = z_sorted[mid_index:]
+            m2 = (z_trail[-1] - z_trail[0]) / (x_trail[-1] - x_trail[0])
+            line2 = z_trail[0] + m2 * (x_trail - x_trail[0])
+
+            # Construct the full separating line
+            boundary = np.empty_like(z_sorted)
+            boundary[:(mid_index + 1)] = line1
+            boundary[mid_index:] = line2
+
+            # Create masks
+            pos_mask = z_sorted >= boundary
+            neg_mask = z_sorted < boundary
 
             lift_pos = np.trapezoid(pressures_sorted[pos_mask], x_sorted[pos_mask]) if np.any(pos_mask) else 0.0
             lift_neg = np.trapezoid(pressures_sorted[neg_mask], x_sorted[neg_mask]) if np.any(neg_mask) else 0.0
@@ -392,7 +473,7 @@ titles = []
 
 for i, filename in enumerate(files[5:] + ["10-20.dat"]):
     x, y, z, pressure = parse_file(filename, inverty=(filename == "10-20.dat"))
-    datasets.append((x, y, pressure))
+    datasets.append((x, y, z, pressure))
     titles.append(f"α={alphas[i+5]}°, β={betas[i+5]}°")
 
 plot_all_lift_distributions(datasets, titles)
@@ -402,7 +483,7 @@ titles = []
 
 for i, filename in enumerate(files[:5]):
     x, y, z, pressure = parse_file(filename, inverty=(filename == "10-20.dat"))
-    datasets.append((x, y, pressure))
+    datasets.append((x, y, z, pressure))
     titles.append(f"α={alphas[i]}°, β={betas[i]}°")
 
 plot_all_lift_distributions(datasets, titles)
