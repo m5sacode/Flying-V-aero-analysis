@@ -131,22 +131,26 @@ def compute_lift_coefficient(x, y, z, pressure, q, S):
     Compute the lift coefficient by integrating the pressure distribution separately
     for positive and negative pressures before summing their contributions.
     """
-    mask = (np.abs(y) <= 1.6) & (np.abs(pressure) > 0.5)
+    mask = (np.abs(pressure) > 0.5)
     x_filtered = x[mask]
     y_filtered = y[mask]
     z_filtered = z[mask]
     pressure_filtered = pressure[mask]
 
     unique_z = np.unique(z_filtered)
-    # print(unique_y)
     local_lift = []
 
     for z_value in unique_z:
-        mask_z = (y_filtered == z_value)
+        mask_z = (z_filtered == z_value)
         x_at_z = x_filtered[mask_z]
         y_at_z = y_filtered[mask_z]
         pressures_at_z = pressure_filtered[mask_z]
-
+        if len(pressures_at_z) == 0:
+            continue
+        x_min, x_max = np.min(x_at_z), np.max(x_at_z)
+        if (x_max - x_min) < 0.0001:
+            continue
+        print("Chord: ", (x_max - x_min))
         sorted_indices = np.argsort(x_at_z)
         x_sorted = x_at_z[sorted_indices]
         pressures_sorted = pressures_at_z[sorted_indices]
@@ -189,6 +193,8 @@ def compute_lift_coefficient(x, y, z, pressure, q, S):
 
     sorted_z_indices = np.argsort(unique_z)
     unique_z_sorted = unique_z[sorted_z_indices]
+    if len(local_lift) == 0:
+        raise Exception("No lift values could be computed")
     local_lift_sorted = np.array(local_lift)[sorted_z_indices]
 
     L_total = np.trapezoid(local_lift_sorted, unique_z_sorted)
@@ -386,12 +392,12 @@ def plot_all_lift_distributions(datasets, titles):
 files = ["00-00.dat", "00-05.dat", "00-10.dat", "00-15.dat", "00-20.dat", "10-00.dat", "10-05.dat", "10-10.dat", "10-15.dat"]
 
 cls = []
-total_lifts = []
-left_lifts = []
-right_lifts = []
 alphas = [0,0,0,0,0,10,10,10,10,10]
 betas = [0,5,10,15,20,0,5,10,15,20]
 index = 0
+
+q = 0.5 * 1.176655 * 34.70916 * 34.70916
+S = 1.841 # WARNING, THIS IS THE TOTAL WING AREA NOT THE AREA OF THE WINGLET
 for filename in files:
 
     # Parse the file
@@ -406,6 +412,8 @@ for filename in files:
     title = "Pressures at alpha = " + str(alphas[index]) + " beta = " + str(betas[index])
 
     plot_lift_distribution(x_filtered, y_filtered, z_filtered,pressure_filtered)
+    cl, lift = compute_lift_coefficient(x_filtered, y_filtered, z_filtered, pressure_filtered, q, S)
+    cls.append(cl)
 
 
 # Parse the file
@@ -421,7 +429,9 @@ title = "Pressures at alpha = " + str(alphas[index]) + " beta = " + str(betas[in
 # plot_cp_slices_x(x_filtered, y_filtered, pressure_filtered, 0.5*1.176655*34.70916*34.70916, title=title)
 
 plot_lift_distribution(x_filtered, y_filtered, z_filtered, pressure_filtered)
+cl, lift = compute_lift_coefficient(x_filtered, y_filtered, z_filtered, pressure_filtered, q, S)
 
+cls.append(cl)
 
 alphas = np.array(alphas)
 
@@ -448,3 +458,18 @@ for i, filename in enumerate(files[:5]):
     titles.append(f"α={alphas[i]}°, β={betas[i]}°")
 
 plot_all_lift_distributions(datasets, titles)
+
+# Separate cls
+total_cls_alpha_0 = cls[:5]
+total_cls_alpha_10 = cls[5:]
+
+# Plot cl of both wings vs. sideslip angle for alpha = 0
+plt.figure(figsize=(8, 6))
+plt.plot(betas_alpha_0, total_cls_alpha_0, 'ro-', label="Alpha 0 Cl (\u03B1=0°)")
+plt.plot(betas_alpha_0, total_cls_alpha_10, 'bo-', label="Alpha 10 Cl (\u03B1=0°)")
+plt.xlabel("Sideslip Angle (β°)")
+plt.ylabel("Lift Coefficient")
+plt.title("Cl vs. Sideslip Angle")
+plt.grid(True)
+plt.legend()
+plt.show()
