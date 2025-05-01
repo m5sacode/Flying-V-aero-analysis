@@ -5,6 +5,13 @@ import os
 # Define the folder where you want to save the plots
 output_folder = "plots"
 
+# y_values = [-1.48, -1.40780488, -1.33560976, -1.26341463, -1.19121951, -1.11902439, -1.04682927, -0.97463415, -0.90243902, -0.8302439, -0.75804878, -0.68585366
+# , -0.61365854, -0.54146341, -0.46926829, -0.39707317, -0.32487805, -0.25268293
+# , -0.1804878, -0.10829268, -0.03609756, 0.03609756, 0.10829268, 0.1804878
+# , 0.25268293, 0.32487805, 0.39707317, 0.46926829, 0.54146341, 0.61365854
+# , 0.68585366, 0.75804878, 0.830243, 0.90243902, 0.97463415, 1.04682927
+# , 1.11902439, 1.19121951, 1.26341463, 1.33560976, 1.40780488, 1.48]
+
 # Check if the folder exists, if not, create it
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
@@ -138,13 +145,14 @@ def compute_lift_coefficient(x, y, z, pressure, q, S):
     Compute the lift coefficient by integrating the pressure distribution separately
     for positive and negative pressures before summing their contributions.
     """
-    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 10)
     x_filtered = x[mask]
     y_filtered = y[mask]
     z_filtered = z[mask]
     pressure_filtered = pressure[mask]
 
     unique_y = np.unique(y_filtered)
+    # print(unique_y)
     local_lift = []
 
     for y_value in unique_y:
@@ -204,7 +212,7 @@ def compute_lift_coefficient(x, y, z, pressure, q, S):
 
 
 def plot_lift_distribution(x, y, z, pressure, plot_surf=False):
-    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 10)
     x_filtered = x[mask]
     y_filtered = y[mask]
     z_filtered = z[mask]
@@ -212,6 +220,7 @@ def plot_lift_distribution(x, y, z, pressure, plot_surf=False):
 
     unique_y = np.unique(y_filtered)
     lift_distribution = []
+    valid_y_values = []
 
     for y_value in unique_y:
         mask_y = (y_filtered == y_value)
@@ -276,12 +285,15 @@ def plot_lift_distribution(x, y, z, pressure, plot_surf=False):
         lift_neg = np.trapezoid(pressures_sorted[neg_mask], x_sorted[neg_mask]) if np.any(neg_mask) else 0.0
         lift_at_y = -(lift_pos + lift_neg)
         x_min, x_max = np.min(x_at_y), np.max(x_at_y)
+        if (x_max - x_min) < 0.0001:
+            continue
         print("Chord: ", (x_max - x_min))
         # lift_at_y = lift_at_y/(x_max-x_min) # normalize by the chord
+        valid_y_values.append(y_value)
         lift_distribution.append(lift_at_y)
 
     plt.figure(figsize=(8, 6))
-    plt.plot(unique_y, lift_distribution, marker='o', color='b', label="Lift Distribution")
+    plt.plot(valid_y_values, lift_distribution, marker='o', color='b', label="Lift Distribution")
     plt.axvline(x=0, color='r', linestyle='--', label="Centerline")
     plt.axvline(x=0.94, color='g', linestyle='--', label="Right kink")
     plt.axvline(x=-0.94, color='g', linestyle='--', label="Left kink")
@@ -292,17 +304,22 @@ def plot_lift_distribution(x, y, z, pressure, plot_surf=False):
     plt.title("Lift Distribution Along the Span")
     plt.grid(True)
     plt.legend()
+
+    filename_export = filename+'_Lift_Distribution.png'
+
+    plt.savefig(os.path.join(output_folder, filename_export), dpi=300)
+
     plt.show()
 
 def plot_all_lift_distributions(datasets, titles):
     """
     Plot lift distributions for multiple datasets in a single figure.
-    Each dataset is a tuple (x, y, pressure).
+    Each dataset is a tuple (x, y, z, pressure).
     """
     plt.figure(figsize=(10, 6))
 
     for (x, y, z, pressure), label in zip(datasets, titles):
-        mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+        mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 10)
         x_filtered = x[mask]
         y_filtered = y[mask]
         z_filtered = z[mask]
@@ -310,6 +327,7 @@ def plot_all_lift_distributions(datasets, titles):
 
         unique_y = np.unique(y_filtered)
         lift_distribution = []
+        valid_y_values = []
 
         for y_value in unique_y:
             mask_y = (y_filtered == y_value)
@@ -355,11 +373,15 @@ def plot_all_lift_distributions(datasets, titles):
             lift_neg = np.trapezoid(pressures_sorted[neg_mask], x_sorted[neg_mask]) if np.any(neg_mask) else 0.0
             lift_at_y = -(lift_pos + lift_neg)
             x_min, x_max = np.min(x_at_y), np.max(x_at_y)
+            if (x_max - x_min) < 0.0001:
+                continue
             print("Chord: ", (x_max - x_min))
+            # lift_at_y = lift_at_y/(x_max-x_min) # normalize by the chord
+            valid_y_values.append(y_value)
             # lift_at_y = lift_at_y / (x_max - x_min)  # normalize by the chord
             lift_distribution.append(lift_at_y)
 
-        plt.plot(unique_y, lift_distribution, marker='o', label=label)
+        plt.plot(valid_y_values, lift_distribution, marker='o', label=label)
 
     # Add reference lines and formatting
     plt.axvline(x=0, color='r', linestyle='--', label="Centerline")
@@ -373,6 +395,11 @@ def plot_all_lift_distributions(datasets, titles):
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
+
+    filename_export = titles[0] + '_Lift_Distributions.png'
+
+    plt.savefig(os.path.join(output_folder, filename_export), dpi=300)
+
     plt.show()
 
 
@@ -390,8 +417,8 @@ for filename in files:
     # Parse the file
     x, y, z, pressure = parse_file(filename)
 
-    # Filter out points where abs(y) > 1.5 and pressure == 0
-    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+    # Filter out points where abs(y) > 10.5 and pressure == 0
+    mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 10)
     x_filtered = x[mask]
     y_filtered = y[mask]
     z_filtered = z[mask]
@@ -421,8 +448,8 @@ for filename in files:
     index+=1
 # Parse the file
 x, y, z, pressure = parse_file("10-20.dat", inverty=True)
-# Filter out points where abs(y) > 1.5 and pressure == 0
-mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 2)
+# Filter out points where abs(y) > 10.5 and pressure == 0
+mask = (np.abs(y) <= 1.5) & (np.abs(pressure) > 10)
 x_filtered = x[mask]
 y_filtered = y[mask]
 z_filtered = z[mask]
