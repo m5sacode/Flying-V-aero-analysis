@@ -290,7 +290,7 @@ def plot_lift_distribution(x, y, z, pressure, plot_surf=False, invertlift=False,
     plt.figure(figsize=(8, 6))
     plt.plot(valid_z_values, lift_distribution, marker='o', color='b', label="Lift Distribution")
     plt.xlabel("Spanwise Position (Z Coordinate)")
-    plt.ylabel("Cl (Numerically Integrated)")
+    plt.ylabel("Cl * chord (Numerically Integrated)")
     plt.title("Lift Distribution Along the Span")
     plt.grid(True)
     plt.legend()
@@ -378,7 +378,7 @@ def plot_all_lift_distributions(datasets, titles, q=0.5 * 1.176655 * 34.70916 * 
 
     # Add reference lines and formatting
     plt.xlabel("Spanwise Position (Z Coordinate)")
-    plt.ylabel("Cl (Numerically Integrated)")
+    plt.ylabel("Cl * chord (Numerically Integrated)")
     plt.title("Lift Distributions for All Cases")
     plt.grid(True)
     plt.legend()
