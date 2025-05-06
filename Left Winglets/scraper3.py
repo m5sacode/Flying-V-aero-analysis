@@ -203,7 +203,7 @@ def compute_lift_coefficient(x, y, z, pressure, q, S):
     return Cl, L_total
 
 
-def plot_lift_distribution(x, y, z, pressure, plot_surf=False, invertlift=False):
+def plot_lift_distribution(x, y, z, pressure, plot_surf=False, invertlift=False, q=0.5 * 1.176655 * 34.70916 * 34.70916, S=1.841):
     mask = (np.abs(y) <= 1.6) & (np.abs(pressure) > 0.5)
     x_filtered = x[mask]
     y_filtered = y[mask]
@@ -282,14 +282,15 @@ def plot_lift_distribution(x, y, z, pressure, plot_surf=False, invertlift=False)
         if (x_max - x_min) < 0.0001:
             continue
         print("Chord: ", (x_max - x_min))
-        # lift_at_y = lift_at_y/(x_max-x_min) # normalize by the chord
+        lift_at_z = lift_at_z * (x_max - x_min)  # denormalize by the chord
+        lift_at_z = lift_at_z / (q * S * (x_max - x_min))
         valid_z_values.append(z_value)
         lift_distribution.append(lift_at_z)
 
     plt.figure(figsize=(8, 6))
     plt.plot(valid_z_values, lift_distribution, marker='o', color='b', label="Lift Distribution")
     plt.xlabel("Spanwise Position (Z Coordinate)")
-    plt.ylabel("Lift (Numerically Integrated)")
+    plt.ylabel("Cl (Numerically Integrated)")
     plt.title("Lift Distribution Along the Span")
     plt.grid(True)
     plt.legend()
@@ -300,7 +301,7 @@ def plot_lift_distribution(x, y, z, pressure, plot_surf=False, invertlift=False)
 
     plt.show()
 
-def plot_all_lift_distributions(datasets, titles):
+def plot_all_lift_distributions(datasets, titles, q=0.5 * 1.176655 * 34.70916 * 34.70916, S=1.841):
     """
     Plot lift distributions for multiple datasets in a single figure.
     Each dataset is a tuple (x, y, z, pressure).
@@ -368,7 +369,8 @@ def plot_all_lift_distributions(datasets, titles):
             if (x_max - x_min) < 0.0001:
                 continue
             print("Chord: ", (x_max - x_min))
-            # lift_at_y = lift_at_y/(x_max-x_min) # normalize by the chord
+            lift_at_z = lift_at_z*(x_max-x_min) # denormalize by the chord
+            lift_at_z = lift_at_z/(q*S*(x_max-x_min))
             valid_z_values.append(z_value)
             lift_distribution.append(lift_at_z)
 
@@ -376,7 +378,7 @@ def plot_all_lift_distributions(datasets, titles):
 
     # Add reference lines and formatting
     plt.xlabel("Spanwise Position (Z Coordinate)")
-    plt.ylabel("Lift (Numerically Integrated)")
+    plt.ylabel("Cl (Numerically Integrated)")
     plt.title("Lift Distributions for All Cases")
     plt.grid(True)
     plt.legend()
