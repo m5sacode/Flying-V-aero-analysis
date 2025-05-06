@@ -363,8 +363,8 @@ def plot_all_lift_distributions(datasets, titles, q=0.5 * 1.176655 * 34.70916 * 
             lift_pos = np.trapezoid(pressures_sorted[pos_mask], x_sorted[pos_mask]) if np.any(pos_mask) else 0.0
             lift_neg = np.trapezoid(pressures_sorted[neg_mask], x_sorted[neg_mask]) if np.any(neg_mask) else 0.0
             lift_at_z = -(lift_pos + lift_neg)
-            if label == f"α=10°, β=20°":
-                lift_at_z = 0-lift_at_z # Invert the α=10°, β=20° case
+            # if label == f"α=10°, β=20°":
+                # lift_at_z = 0-lift_at_z # Invert the α=10°, β=20° case
             x_min, x_max = np.min(x_at_z), np.max(x_at_z)
             if (x_max - x_min) < 0.0001:
                 continue
