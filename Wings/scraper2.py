@@ -313,7 +313,7 @@ def plot_lift_distribution(x, y, z, pressure, plot_surf=False, q=0.5 * 1.176655 
 
     plt.show()
 
-def plot_all_lift_distributions(datasets, titles, q=0.5 * 1.176655 * 34.70916 * 34.70916, S=1.841):
+def plot_all_lift_distributions(datasets, titles, q=0.5 * 1.176655 * 34.70916 * 34.70916, S=1.841, leyend=False):
     """
     Plot lift distributions for multiple datasets in a single figure.
     Each dataset is a tuple (x, y, z, pressure).
@@ -388,16 +388,18 @@ def plot_all_lift_distributions(datasets, titles, q=0.5 * 1.176655 * 34.70916 * 
         plt.plot(valid_y_values, lift_distribution, marker='o', label=label)
 
     # Add reference lines and formatting
+    plt.axhline(y=0, color='k')
     plt.axvline(x=0, color='r', linestyle='--', label="Centerline")
     plt.axvline(x=0.94, color='g', linestyle='--', label="Right kink")
     plt.axvline(x=-0.94, color='g', linestyle='--', label="Left kink")
     plt.axvline(x=0.579, color='b', linestyle='dotted', label="Right TE kink")
     plt.axvline(x=-0.579, color='b', linestyle='dotted', label="Left TE kink")
-    plt.xlabel("Spanwise Position (Y Coordinate)")
+    plt.xlabel("Spanwise Position (Y Coordinate in meters)")
     plt.ylabel("Cl * chord (Numerically Integrated)")
-    plt.title("Lift Distributions for All Cases")
+    # plt.title("Lift Distributions for All Cases")
     plt.grid(True)
-    plt.legend()
+    if leyend:
+        plt.legend(fontsize=15)
     plt.tight_layout()
 
     filename_export = titles[0] + '_Lift_Distributions.png'
@@ -505,7 +507,7 @@ titles = []
 for i, filename in enumerate(files[5:] + ["10-20.dat"]):
     x, y, z, pressure = parse_file(filename, inverty=(filename == "10-20.dat"))
     datasets.append((x, y, z, pressure))
-    titles.append(f"α={alphas[i+5]}°, β={betas[i+5]}°")
+    titles.append(f"β={betas[i+5]}°")
 
 plot_all_lift_distributions(datasets, titles)
 
@@ -515,9 +517,9 @@ titles = []
 for i, filename in enumerate(files[:5]):
     x, y, z, pressure = parse_file(filename, inverty=(filename == "10-20.dat"))
     datasets.append((x, y, z, pressure))
-    titles.append(f"α={alphas[i]}°, β={betas[i]}°")
+    titles.append(f"β={betas[i]}°")
 
-plot_all_lift_distributions(datasets, titles)
+plot_all_lift_distributions(datasets, titles, leyend=True)
 
 
 # Plot lift of both wings vs. sideslip angle for alpha = 0
